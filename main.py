@@ -20,26 +20,43 @@ def main():
     last_sync_filename = find_last_sync_filename(target_dir)
     print(f"last sync filename: {last_sync_filename}")
 
-    files = os.listdir(src_dir)
-    for f in files:
+    all_file = combine_files(src_dir)
+    for f, files in all_file.items():
         if last_sync_filename != "" and f <= last_sync_filename:
             continue
-        transfer(full_filename(src_dir, f), target_dir)
+        transfer(files, target_dir)
     print("end of transfer")
 
 
-def transfer(file, target_dir):
-    """transfer file to target directory split by date"""
-    ctime = get_ctime_from_file(file)
-    if ctime == "":
-        return
+def combine_files(src_dir):
+    """combine"""
+    all_files = {}
+    files = os.listdir(src_dir)
+    for file in files:
+        file_name, file_ext = os.path.splitext(file)
+        if file_ext not in [".JPG", ".CR3"]:
+            continue
+        if file_name in all_files:
+            all_files[file_name][file_ext] = full_filename(src_dir, file)
+            continue
+        all_files[file_name] = {file_ext: full_filename(src_dir, file)}
+    return all_files
 
-    print(f"moved {file} to {target_dir}")
+
+def transfer(files, target_dir):
+    """transfer file to target directory split by date"""
+
+    ctime = get_ctime_from_file(files[".JPG"])
+    if ctime == "":
+        ctime = "2001-01-01"
 
     target_save_dir = full_filename(target_dir, ctime)
     if not os.path.exists(target_save_dir):
         os.mkdir(target_save_dir)
-    shutil.copy(file, target_save_dir)
+
+    for _, file in files.items():
+        shutil.copy(file, target_save_dir)
+        print(f"moved {file} to {target_save_dir}")
 
 
 def get_ctime_from_file(file):
